@@ -20,7 +20,8 @@ Inductive FSys (* set of FSets *)
 Implement this as a [MSetWeakList](https://coq.inria.fr/library/Coq.MSets.MSetWeakList.html#) which requires elements of DecidableType.
 
 #### Need:
-- `in` function: `in : FSet -> FSys -> bool`
+- [x] `in` function: `in : FSet -> FSys -> bool`
+    - This is the `mem` function
 - `Show`
 - Generator to generate `f1 f2 f3` for the Prop below
 
