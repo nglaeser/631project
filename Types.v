@@ -1,5 +1,5 @@
 From Coq Require Import MSets Arith.
-
+From QuickChick Require Import QuickChick.
 
 (****************************************************************)
 
@@ -48,11 +48,22 @@ Definition test2 := FSys.union (FSys.singleton test) (FSys.empty).
 Compute FSys.mem test test2. (* evaluates to `true` *)
 Compute FSys.subset FSys.empty test2. (* evaluates to `true` *)
 
+Instance showFSet : Show FSet.t :=
+  {| show s := show (FSet.elements s) 
+  |}.
+
+(* TODO: generate list of nats, use fold with FSet.add to generate FSet *)
+
 (****************************************************************)
 
 (* desirable properties *)
-Definition b3 (f1 f2 f3 : FSet.t) (F : FSys.t) (n : nat) : bool :=
+Definition q3 (f1 f2 f3 : FSet.t) (F : FSys.t) (n : nat) : bool :=
   (FSys.mem f1 F) && (FSys.mem f2 F) && (FSys.mem f3 F) &&
   negb  (FSet.subset (all_nodes n) (FSet.union (FSet.union f1 f2) f3)).
 
 (* maybe this should be rewritten with Props instead of bools? *)
+Definition q3all (F : FSys.t) (n : nat) :=
+  forall f1 f2 f3
+  
+
+        
