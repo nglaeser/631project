@@ -1,4 +1,4 @@
-From Coq Require Import MSets Arith List.
+From Coq Require Import FSets Arith List.
 From QuickChick Require Import QuickChick. Import QcNotation.
 From Coq Require Import Lists.List.
 Import ListNotations.
@@ -15,6 +15,12 @@ Module FSet := Make Nat_as_OT.
 - subset s1 s2 : returns true if s1 <= s2
 - mem : membership
  *)
+
+
+Instance showFSet : Show FSet.t :=
+  {| show s := show (FSet.elements s) 
+  |}.
+Compute (show (FSet.add 1 FSet.empty)).
 
 Fixpoint all_nodes (n: nat) : FSet.t :=
   match n with
@@ -38,22 +44,7 @@ Compute FSet.mem 42 test.  (* evaluates to `true`  *)
 Compute FSet.is_empty test.     (* evaluates to `false` *)
 Compute FSet.is_empty FSet.empty.  (* evaluates to `true` *)
 
-(****************************************************************)
-
-(* set of sets of nodes *)
-Module FSys := Make FSet.
-
-(* some examples *)
-Definition test2 := FSys.union (FSys.singleton test) (FSys.empty).
-
-Compute FSys.mem test test2. (* evaluates to `true` *)
-Compute FSys.subset FSys.empty test2. (* evaluates to `true` *)
-
-Instance showFSet : Show FSet.t :=
-  {| show s := show (FSet.elements s) 
-  |}.
-Compute (show (FSet.add 1 FSet.empty)).
-
+(*now to build our generator! first, some familiar helper functions *)
 
 (* straight from QC.v *)
 Fixpoint genListSized {A} (sz : nat) (g : G A) : G (list A) :=
@@ -65,16 +56,15 @@ Fixpoint genListSized {A} (sz : nat) (g : G A) : G (list A) :=
              ]
   end.
 
-(*attempt 1 at a sized generator for lists of nats < n : 
- responds [Warning: The following logical axioms were encountered...] *) 
+(* the following sometimes responds 
+   [Warning: The following logical axioms were encountered...]
+   which Leo says not to worry about*) 
 (*generates lists of length up to len, w elts that are nats < n*)
 Definition genNatListSized (n : nat) (len : nat) : G (list nat) :=
   genListSized len (choose (0,n)).
 Check genNatListSized.
 Sample (genNatListSized 5 2).
 
-(*attempt 2:
- still responds [Warning: The following logical axioms were encountered...] *) 
 Fixpoint genNatListSized' (n : nat) (len : nat) : G (list nat) :=
   match len with
     | O => ret nil
@@ -83,7 +73,8 @@ Fixpoint genNatListSized' (n : nat) (len : nat) : G (list nat) :=
                (len, liftM2 cons (choose (0,n)) (genNatListSized n len'))
              ]
   end.
-Sample (genNatListSized' 5 2).
+(*Sample (genNatListSized' 5 2).*)
+
 
 (* basically [fold] from Poly.v*)
 Fixpoint FSetFold (f: nat->FSet.t->FSet.t) (l: list nat) (b: FSet.t)
@@ -102,24 +93,45 @@ Fixpoint listNatToFSet (l : list nat) : FSet.t :=
 
 (* generator for FSets, takes *)
 Fixpoint genFSet (n : nat) (len : nat) : G FSet.t :=
+  (* n: elements can be any nat less than n *)
+  (* len: max size of the FSets *)
   liftM listNatToFSet (genListSized len (choose (0,n))).
 Check genFSet.
 Check (genFSet 5 2).
 
-Sample (genFSet 5 2).
+(* Sample (genFSet 5 2). *)
 
-(* result: Signature mismatch:
-       ...
-       The value `eq_dec' is required but not provided... *)
 
-(* next TODO: take generator g for FSets and plug in below*) 
-Fixpoint genFSys (n : nat) (sys_sz : nat) : G FSys.t :=
+(****************************************************************)
+
+(* set of sets of nodes, i.e. sets of FSets *)
+Module FSys := Make FSet.
+
+Instance showFSys: Show FSys.t :=
+  {| show s := show (FSys.elements s)
+  |}.
+
+(* some examples *)
+Definition test2 := FSys.union (FSys.singleton test) (FSys.empty).
+
+Compute FSys.mem test test2. (* evaluates to `true` *)
+Compute FSys.subset FSys.empty test2. (* evaluates to `true` *)
+
+(*now we're ready to make our FSys generator!*)
+
+Fixpoint genFSys (n : nat) (len : nat) (sys_sz : nat) : G FSys.t :=
+  (*sys_sz: max number of FSets in a generated FSys*)
   match sys_sz with
-  | 0 => ret FSet.empty
+  | 0 => ret FSys.empty
   | S sys_sz' =>
-    freq [ (1, ret FSet.empty);
-             (sys_sz, liftM2 FSys.union (*g*) (genFSys sys_sz' (*g*)))
+    freq [ (1, ret FSys.empty) ;
+           (sys_sz, liftM2 FSys.add (genFSet n len) (genFSys n len sys_sz'))
                ]
+  end.
+
+(* Sample (genFSys 3 3 3). *)
+
+(*makes a lot of empty sets... could tweak FSet generator if we want*)
 
 (****************************************************************)
 
