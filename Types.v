@@ -1,7 +1,10 @@
-From Coq Require Import FSets Arith List.
+From Coq Require Import FSets Arith List. Import ListNotations.
 From QuickChick Require Import QuickChick. Import QcNotation.
-From Coq Require Import Lists.List.
-Import ListNotations.
+
+Require Export ExtLib.Structures.Monads.
+Export MonadNotation. Open Scope monad_scope.
+
+Require Import String. Local Open Scope string.
 (****************************************************************)
 
 (* set of nats between 1 and n (representing nodes), no repeats *)
@@ -133,6 +136,60 @@ Fixpoint genFSys (n : nat) (len : nat) (sys_sz : nat) : G FSys.t :=
 
 (****************************************************************)
 
+(* the following definitions (Result, Checkable, and forAll) come straight from QC.v *)
+Inductive Result :=
+  | Success : Result
+  | Failure : forall {A} `{Show A}, A -> Result.
+
+Arguments Failure {A} {H} _.
+
+Instance showResult : Show Result :=
+  {
+    show r := match r with
+              | Success => "Success"
+              | Failure _ _ a => "Failure: " ++ show a
+              end
+  }.
+
+Definition Checker := G Result.
+
+Class Checkable A :=
+  {
+    checker : A -> Checker
+  }.
+
+Instance showUnit : Show unit :=
+  {
+    show u := "tt"
+  }.
+
+(** The failure cases in the [bool] and [Dec] checkers don't need to
+    record anything except the [Failure], so we put [tt] (the sole
+    value of type [unit]) as the "failure reason." *)
+
+Instance checkableBool : Checkable bool :=
+  {
+    checker b := if b then ret Success else ret (Failure tt)
+  }.
+
+Instance checkableDec `{P : Prop} `{Dec P} : Checkable P :=
+  {
+    checker p := if P? then ret Success else ret (Failure tt)
+  }.
+
+(* Slightly modified to take an additional generator *)
+Definition forAll {A B C : Type} `{Show A} `{Checkable C}
+                  (ga : G A) (gb : G B) (f : A -> B -> C)
+                : Checker :=
+  a <- ga ;;
+  b <- gb ;;
+  r <- checker (f a b) ;;
+  match r with
+  | Success => ret Success
+  | @Failure _ _ b => ret (Failure (a,b))
+  end.
+
+(****************************************************************)
 (* properties to test *)
 Definition q3 (f1 f2 f3 : FSet.t) (F : FSys.t) (n : nat) : bool :=
   (FSys.mem f1 F) && (FSys.mem f2 F) && (FSys.mem f3 F) &&
@@ -143,3 +200,47 @@ Definition q3 (f1 f2 f3 : FSet.t) (F : FSys.t) (n : nat) : bool :=
 Definition q3all (F : FSys.t) (n : nat) :=
   forall f1 f2 f3, is_true (q3 f1 f2 f3 F n).
 
+Definition q3all' (f1 f2 f3 : FSet.t) (F : FSys.t) (n : nat) :=
+  (q3 f1 f2 f3 F n).
+
+(****************************************************************)
+
+Sample
+  (forAll
+     (genFSys 3 3 3)
+     (choose (0, 5))
+     (q3all' FSet.empty FSet.empty FSet.empty)
+  ).
+
+(* Sample
+  (forAll
+     (genFSys 3 3 3)
+     (choose (0, 5))
+     q3all
+  ).
+
+==>
+
+Error: Unable to satisfy the following constraints:
+
+?H0 : "Checkable Prop" *)
+
+(* QuickChick
+  (forAll
+     (genFSys 3 3 3)
+     (choose (0, 5))
+     (q3all' FSet.empty FSet.empty FSet.empty)
+  ).
+
+==>
+
+Error: Unable to satisfy the following constraints:
+
+?arg_2 : "Checker.Checkable Checker" *)
+
+(* QuickChick
+  (forAll
+     (genFSys 3 3 3)
+     (choose (0, 5))
+     q3all
+  ). *)
