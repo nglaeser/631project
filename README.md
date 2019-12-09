@@ -24,7 +24,8 @@ Implement this as a [MSetWeakList](https://coq.inria.fr/library/Coq.MSets.MSetWe
     - This is the `mem` function
 - [x] `Show`
 - [x] Generator to generate `f1 f2 f3` for the Prop below
-- [ ] `Checkable` type with `check` constructor to be able to use `QuickChick (forAll (generator def)).`
+- [x] `Checkable` type with `check` constructor to be able to use `QuickChick (forAll (generator def)).`
+- [ ] get `QuickChick( ... q3all ).` to work
 
 ## Other links
 
