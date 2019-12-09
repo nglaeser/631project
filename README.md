@@ -22,15 +22,11 @@ Implement this as a [MSetWeakList](https://coq.inria.fr/library/Coq.MSets.MSetWe
 #### Need:
 - [x] `in` function: `in : FSet -> FSys -> bool`
     - This is the `mem` function
-- `Show`
-- Generator to generate `f1 f2 f3` for the Prop below
-
-```
-Prop : forall (f1 f2 f3 : FSet) (F : FSys),
-    (f1 in F) -> (f2 in F) -> (f3 in F) ->
-    ~([1..n] subset (f1 union f2 union f3)).
-```
+- [x] `Show`
+- [x] Generator to generate `f1 f2 f3` for the Prop below
+- [ ] `Checkable` type with `check` constructor to be able to use `QuickChick (forAll (generator def)).`
 
 ## Other links
 
-- [Finite Sets library](https://coq.inria.fr/library/Coq.Sets.Finite_sets.html): probably more complicated to use than the libraries linked above
+- [Proposal](https://docs.google.com/document/d/1lFPreml7LgslPnTjjdDfHuVF2pesquiQE24GpgWXhmI/edit?usp=sharing)
+- [Writeup](https://docs.google.com/document/d/1AtpoAKTTFqaedvNnEK_a1VNv1QCHdklmnarx29TzXEo/edit?usp=sharing)
