@@ -52,7 +52,7 @@ Fixpoint genListSized {A} (sz : nat) (g : G A) : G (list A) :=
     | O => ret nil
     | S sz' =>
         freq [ (1, ret nil) ;
-               (sz, liftM2 cons g (genListSized sz' g))
+               ((Nat.square sz), liftM2 cons g (genListSized sz' g))
              ]
   end.
 
@@ -99,7 +99,7 @@ Fixpoint genFSet (n : nat) (len : nat) : G FSet.t :=
 Check genFSet.
 Check (genFSet 5 2).
 
-(* Sample (genFSet 5 2). *)
+(*Sample (genFSet 5 2).*)
 
 
 (****************************************************************)
@@ -125,13 +125,11 @@ Fixpoint genFSys (n : nat) (len : nat) (sys_sz : nat) : G FSys.t :=
   | 0 => ret FSys.empty
   | S sys_sz' =>
     freq [ (1, ret FSys.empty) ;
-           (sys_sz, liftM2 FSys.add (genFSet n len) (genFSys n len sys_sz'))
+           ((Nat.square sys_sz), liftM2 FSys.add (genFSet n len) (genFSys n len sys_sz'))
                ]
   end.
 
-(* Sample (genFSys 3 3 3). *)
-
-(*makes a lot of empty sets... could tweak FSet generator if we want*)
+(* Sample (genFSys 3 3 3).*)
 
 (****************************************************************)
 
@@ -141,8 +139,7 @@ Definition q3 (f1 f2 f3 : FSet.t) (F : FSys.t) (n : nat) : bool :=
   negb  (FSet.subset (all_nodes n) (FSet.union (FSet.union f1 f2) f3)).
 
 (* maybe this should be rewritten with Props instead of bools? *)
-Definition q3all (F : FSys.t) (n : nat) :=
-  forall f1 f2 f3
-  
 
-        
+Definition q3all (F : FSys.t) (n : nat) :=
+  forall f1 f2 f3, is_true (q3 f1 f2 f3 F n).
+
