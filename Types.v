@@ -123,6 +123,15 @@ Compute FSys.subset FSys.empty test2. (* evaluates to `true` *)
 (*now we're ready to make our FSys generator!*)
 
 Fixpoint genFSys (n : nat) (len : nat) (sys_sz : nat) : G FSys.t :=
+  (*sys_sz: number of FSets in a generated FSys*)
+  match sys_sz with
+  | 0 => ret FSys.empty
+  | S sys_sz' =>
+    liftM2 FSys.add (genFSet n len) (genFSys n len sys_sz')
+  end.
+
+(* optionally, slightly more interesting generator *)
+Fixpoint genFSys' (n : nat) (len : nat) (sys_sz : nat) : G FSys.t :=
   (*sys_sz: max number of FSets in a generated FSys*)
   match sys_sz with
   | 0 => ret FSys.empty
@@ -132,11 +141,12 @@ Fixpoint genFSys (n : nat) (len : nat) (sys_sz : nat) : G FSys.t :=
                ]
   end.
 
-(* Sample (genFSys 3 3 3).*)
-
+ Sample (genFSys 3 3 3).
+Sample (genFSys 5 3 3).
 (****************************************************************)
 
-(* the following definitions (Result, Checkable, and forAll) come straight from QC.v *)
+(* useful QuickChick types from QC.v, repeated here for convenience:
+
 Inductive Result :=
   | Success : Result
   | Failure : forall {A} `{Show A}, A -> Result.
@@ -147,7 +157,7 @@ Instance showResult : Show Result :=
   {
     show r := match r with
               | Success => "Success"
-              | Failure _ _ a => "Failure: " ++ show a
+              | Failure a => "Failure: " ++ show a (* edited from _ _ a*)
               end
   }.
 
@@ -188,14 +198,16 @@ Definition forAll {A B C : Type} `{Show A} `{Checkable C}
   | Success => ret Success
   | @Failure _ _ b => ret (Failure (a,b))
   end.
+ *)
 
+ Check @List.forallb.
+ Check whenFail.
 (****************************************************************)
 (* properties to test *)
 Definition q3 (f1 f2 f3 : FSet.t) (F : FSys.t) (n : nat) : bool :=
   (FSys.mem f1 F) && (FSys.mem f2 F) && (FSys.mem f3 F) &&
   negb  (FSet.subset (all_nodes n) (FSet.union (FSet.union f1 f2) f3)).
 
-(* maybe this should be rewritten with Props instead of bools? *)
 
 Definition q3all (F : FSys.t) (n : nat) :=
   forall f1 f2 f3, is_true (q3 f1 f2 f3 F n).
@@ -203,44 +215,50 @@ Definition q3all (F : FSys.t) (n : nat) :=
 Definition q3all' (f1 f2 f3 : FSet.t) (F : FSys.t) (n : nat) :=
   (q3 f1 f2 f3 F n).
 
+
 (****************************************************************)
 
-Sample
-  (forAll
-     (genFSys 3 3 3)
-     (choose (0, 5))
-     (q3all' FSet.empty FSet.empty FSet.empty)
-  ).
+(* chooseFSet: given FSys, this is a generator that chooses
+     one FSet in FSys. *)
+Check FSys.elements.
+Definition chooseFSet (fsys : FSys.t) : G FSet.t :=
+  elems_ FSet.empty (FSys.elements fsys).
 
-(* Sample
-  (forAll
-     (genFSys 3 3 3)
-     (choose (0, 5))
-     q3all
-  ).
+(* genTriples: given FSys, this is a generator that will
+   repeatedly choose 3 FSets in FSys at random,
+   and returns a list of k such triples. *)
+Fixpoint genTestTriples (k : nat) (fsys : FSys.t)
+  : G (list (FSet.t*FSet.t*FSet.t)) :=
+  let g3 :=
+      f1 <- (chooseFSet fsys) ;;
+         f2 <- (chooseFSet fsys) ;;
+         f3 <- (chooseFSet fsys) ;;
+      ret (f1,f2,f3) in
+  vectorOf k g3.
 
-==>
+(* usage:
 
-Error: Unable to satisfy the following constraints:
+QuickChick
+  (forAll (genFSys n len sys_sz) (fun fs =>
+      forAll (genTestTriples list_len fs) (fun l =>
+           whenFail 
+            (String.concat "" (List.map (fun '(f1,f2,f3) =>
+                                      if  (negb (q3 f1 f2 f3 fs 3))
+                                      then (show ("failed FSet:",f1,f2,f3))
+                                      else "") l))
+            (List.forallb (fun '(f1,f2,f3) =>  ( (q3 f1 f2 f3 fs n))) l)))).
+                           
+*)
 
-?H0 : "Checkable Prop" *)
-
-(* QuickChick
-  (forAll
-     (genFSys 3 3 3)
-     (choose (0, 5))
-     (q3all' FSet.empty FSet.empty FSet.empty)
-  ).
-
-==>
-
-Error: Unable to satisfy the following constraints:
-
-?arg_2 : "Checker.Checkable Checker" *)
-
-(* QuickChick
-  (forAll
-     (genFSys 3 3 3)
-     (choose (0, 5))
-     q3all
-  ). *)
+(*the following call to QuickChick will sometimes generate an empty system;
+  just try calling it again.*)
+QuickChick
+  (forAll (genFSys 5 3 3) (fun fs =>
+      forAll (genTestTriples 5 fs) (fun l =>
+           whenFail 
+            (String.concat "" (List.map (fun '(f1,f2,f3) =>
+                                      if  (negb (q3 f1 f2 f3 fs 3))
+                                      then (show ("failed FSet:",f1,f2,f3))
+                                      else "") l))
+            (List.forallb (fun '(f1,f2,f3) =>  ( (q3 f1 f2 f3 fs 5))) l)))).
+                           
