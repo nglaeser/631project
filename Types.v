@@ -65,8 +65,8 @@ Fixpoint genListSized {A} (sz : nat) (g : G A) : G (list A) :=
 (*generates lists of length up to len, w elts that are nats < n*)
 Definition genNatListSized (n : nat) (len : nat) : G (list nat) :=
   genListSized len (choose (0,n)).
-Check genNatListSized.
-Sample (genNatListSized 5 2).
+
+(* Sample (genNatListSized 5 2).*)
 
 Fixpoint genNatListSized' (n : nat) (len : nat) : G (list nat) :=
   match len with
@@ -86,9 +86,8 @@ Fixpoint FSetFold (f: nat->FSet.t->FSet.t) (l: list nat) (b: FSet.t)
   | nil => b
   | h :: t => f h (FSetFold f t b)
   end.
-Check FSetFold.
-Check FSet.add.
-Compute (show (FSetFold FSet.add [1;2;3] FSet.empty)).
+
+(* Compute (show (FSetFold FSet.add [1;2;3] FSet.empty)).*)
 
 (* function converting a list of nats to an FSet *)
 Fixpoint listNatToFSet (l : list nat) : FSet.t :=
@@ -99,8 +98,6 @@ Fixpoint genFSet (n : nat) (len : nat) : G FSet.t :=
   (* n: elements can be any nat less than n *)
   (* len: max size of the FSets *)
   liftM listNatToFSet (genListSized len (choose (0,n))).
-Check genFSet.
-Check (genFSet 5 2).
 
 (*Sample (genFSet 5 2).*)
 
@@ -141,8 +138,8 @@ Fixpoint genFSys' (n : nat) (len : nat) (sys_sz : nat) : G FSys.t :=
                ]
   end.
 
- Sample (genFSys 3 3 3).
-Sample (genFSys 5 3 3).
+(* Sample (genFSys 3 3 3).*)
+(* Sample (genFSys 5 3 3).*)
 (****************************************************************)
 
 (* useful QuickChick types from QC.v, repeated here for convenience:
@@ -200,14 +197,13 @@ Definition forAll {A B C : Type} `{Show A} `{Checkable C}
   end.
  *)
 
- Check @List.forallb.
- Check whenFail.
 (****************************************************************)
 (* properties to test *)
 Definition q3 (f1 f2 f3 : FSet.t) (F : FSys.t) (n : nat) : bool :=
   (FSys.mem f1 F) && (FSys.mem f2 F) && (FSys.mem f3 F) &&
   negb  (FSet.subset (all_nodes n) (FSet.union (FSet.union f1 f2) f3)).
-
+(* intuition: q3 is a property necessary for system-wide consistency,
+    which says that no 3 fail sets in the system cover all nodes.*)
 
 Definition q3all (F : FSys.t) (n : nat) :=
   forall f1 f2 f3, is_true (q3 f1 f2 f3 F n).
@@ -236,14 +232,17 @@ Fixpoint genTestTriples (k : nat) (fsys : FSys.t)
       ret (f1,f2,f3) in
   vectorOf k g3.
 
-(* usage:
+(*********
+   usage: replace n, len, sys_sz in the query below with desired parameters
+  output: if there are 3 sets f1 f2 f3 in F that cover 0..n,
+          print f1 f2 f3
 
 QuickChick
   (forAll (genFSys n len sys_sz) (fun fs =>
       forAll (genTestTriples list_len fs) (fun l =>
            whenFail 
             (String.concat "" (List.map (fun '(f1,f2,f3) =>
-                                      if  (negb (q3 f1 f2 f3 fs 3))
+                                      if  (negb (q3 f1 f2 f3 fs n))
                                       then (show ("failed FSet:",f1,f2,f3))
                                       else "") l))
             (List.forallb (fun '(f1,f2,f3) =>  ( (q3 f1 f2 f3 fs n))) l)))).
@@ -257,7 +256,7 @@ QuickChick
       forAll (genTestTriples 5 fs) (fun l =>
            whenFail 
             (String.concat "" (List.map (fun '(f1,f2,f3) =>
-                                      if  (negb (q3 f1 f2 f3 fs 3))
+                                      if  (negb (q3 f1 f2 f3 fs 5))
                                       then (show ("failed FSet:",f1,f2,f3))
                                       else "") l))
             (List.forallb (fun '(f1,f2,f3) =>  ( (q3 f1 f2 f3 fs 5))) l)))).
