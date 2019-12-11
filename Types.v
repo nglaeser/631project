@@ -246,7 +246,6 @@ QuickChick
                                       then (show ("failed FSet:",f1,f2,f3))
                                       else "") l))
             (List.forallb (fun '(f1,f2,f3) =>  ( (q3 f1 f2 f3 fs n))) l)))).
-                           
 *)
 
 (*the following call to QuickChick will sometimes generate an empty system;
@@ -260,4 +259,3 @@ QuickChick
                                       then (show ("failed FSet:",f1,f2,f3))
                                       else "") l))
             (List.forallb (fun '(f1,f2,f3) =>  ( (q3 f1 f2 f3 fs 5))) l)))).
-                           
